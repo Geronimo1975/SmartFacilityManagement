@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScatterChart, Scatter, XAxis, YAxis, ZAxis, Tooltip, Cell } from 'recharts';
 import { useOccupancy } from '@/hooks/use-occupancy';
 import { Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 type OccupancyData = {
   id: number;
@@ -20,8 +21,8 @@ type HeatMapProps = {
 };
 
 export function OccupancyHeatMap({ buildingId, width = 600, height = 400 }: HeatMapProps) {
-  const { updateOccupancy } = useOccupancy(buildingId);
-  
+  const { updateOccupancy, isConnected } = useOccupancy(buildingId);
+
   const { data: occupancyData, isLoading } = useQuery<OccupancyData[]>({
     queryKey: ['/api/buildings', buildingId, 'occupancy'],
   });
@@ -40,14 +41,6 @@ export function OccupancyHeatMap({ buildingId, width = 600, height = 400 }: Heat
     });
   }, [occupancyData]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center p-4">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
-  }
-
   const getColor = (value: number) => {
     const maxOccupancy = 50;
     const intensity = Math.min((value / maxOccupancy) * 255, 255);
@@ -57,36 +50,78 @@ export function OccupancyHeatMap({ buildingId, width = 600, height = 400 }: Heat
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Occupancy Heat Map</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Occupancy Heat Map</CardTitle>
+          <AnimatePresence>
+            {!isConnected && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-sm text-muted-foreground flex items-center gap-2"
+              >
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Connecting...
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="w-full overflow-x-auto">
-          <ScatterChart width={width} height={height} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-            <XAxis type="number" dataKey="x" name="X Position" />
-            <YAxis type="number" dataKey="y" name="Y Position" />
-            <ZAxis type="number" dataKey="z" range={[100, 1000]} name="Occupancy" />
-            <Tooltip 
-              cursor={{ strokeDasharray: '3 3' }}
-              content={({ payload }) => {
-                if (payload && payload[0]) {
-                  const data = payload[0].payload;
-                  return (
-                    <div className="bg-background p-2 rounded shadow-lg border">
-                      <p>Zone: {data.zone}</p>
-                      <p>Occupancy: {data.z}</p>
-                    </div>
-                  );
-                }
-                return null;
-              }}
-            />
-            <Scatter data={processedData} shape="circle">
-              {processedData.map((entry, index) => (
-                <Cell key={index} fill={getColor(entry.z)} />
-              ))}
-            </Scatter>
-          </ScatterChart>
-        </div>
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center justify-center p-4 min-h-[400px]"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Loading occupancy data...</p>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="chart"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="w-full overflow-x-auto"
+            >
+              <ScatterChart width={width} height={height} margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+                <XAxis type="number" dataKey="x" name="X Position" />
+                <YAxis type="number" dataKey="y" name="Y Position" />
+                <ZAxis type="number" dataKey="z" range={[100, 1000]} name="Occupancy" />
+                <Tooltip 
+                  cursor={{ strokeDasharray: '3 3' }}
+                  content={({ payload }) => {
+                    if (payload && payload[0]) {
+                      const data = payload[0].payload;
+                      return (
+                        <motion.div
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="bg-background p-2 rounded shadow-lg border"
+                        >
+                          <p>Zone: {data.zone}</p>
+                          <p>Occupancy: {data.z}</p>
+                        </motion.div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Scatter data={processedData} shape="circle">
+                  {processedData.map((entry, index) => (
+                    <Cell key={index} fill={getColor(entry.z)} />
+                  ))}
+                </Scatter>
+              </ScatterChart>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </CardContent>
     </Card>
   );
