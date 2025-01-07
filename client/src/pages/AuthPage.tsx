@@ -22,18 +22,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ROLES } from "@/lib/constants";
+import { Loader2 } from "lucide-react";
 
 const formSchema = z.object({
-  username: z.string().min(3).max(50),
-  password: z.string().min(6),
-  fullName: z.string().min(3).max(100),
-  email: z.string().email(),
-  role: z.enum(["admin", "company", "partner", "client"]),
+  username: z.string().min(3, "Username must be at least 3 characters").max(50),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  fullName: z.string().min(3).max(100).optional(),
+  email: z.string().email().optional(),
+  role: z.enum(["admin", "company", "partner", "client"]).optional(),
 });
 
 export default function AuthPage() {
   const { login, register } = useUser();
   const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -47,10 +49,32 @@ export default function AuthPage() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (isLogin) {
-      await login(values);
-    } else {
-      await register(values);
+    setIsLoading(true);
+    try {
+      if (isLogin) {
+        await login({
+          username: values.username,
+          password: values.password,
+        });
+      } else {
+        if (!values.fullName || !values.email || !values.role) {
+          throw new Error("Missing required fields for registration");
+        }
+        await register({
+          username: values.username,
+          password: values.password,
+          fullName: values.fullName,
+          email: values.email,
+          role: values.role,
+        });
+      }
+    } catch (error) {
+      console.error("Auth error:", error);
+      form.setError("root", { 
+        message: error instanceof Error ? error.message : "Authentication failed" 
+      });
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -70,13 +94,13 @@ export default function AuthPage() {
                   <FormItem>
                     <FormLabel>Username</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={form.control}
                 name="password"
@@ -84,7 +108,7 @@ export default function AuthPage() {
                   <FormItem>
                     <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input type="password" {...field} />
+                      <Input type="password" {...field} disabled={isLoading} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -100,7 +124,7 @@ export default function AuthPage() {
                       <FormItem>
                         <FormLabel>Full Name</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} disabled={isLoading} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -114,7 +138,7 @@ export default function AuthPage() {
                       <FormItem>
                         <FormLabel>Email</FormLabel>
                         <FormControl>
-                          <Input type="email" {...field} />
+                          <Input type="email" {...field} disabled={isLoading} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -130,6 +154,7 @@ export default function AuthPage() {
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
+                          disabled={isLoading}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -151,8 +176,17 @@ export default function AuthPage() {
                 </>
               )}
 
+              {form.formState.errors.root && (
+                <p className="text-sm font-medium text-destructive">
+                  {form.formState.errors.root.message}
+                </p>
+              )}
+
               <div className="space-y-2">
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : null}
                   {isLogin ? "Login" : "Register"}
                 </Button>
                 <Button
@@ -160,6 +194,7 @@ export default function AuthPage() {
                   variant="outline"
                   className="w-full"
                   onClick={() => setIsLogin(!isLogin)}
+                  disabled={isLoading}
                 >
                   {isLogin ? "Need an account?" : "Already have an account?"}
                 </Button>

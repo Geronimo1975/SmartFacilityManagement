@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 type RequestResult = {
   ok: true;
   message?: string;
+  user?: Partial<User>;
 } | {
   ok: false;
   message: string;
@@ -33,7 +34,7 @@ async function handleRequest(
     }
 
     const data = await response.json();
-    return { ok: true, message: data.message };
+    return { ok: true, message: data.message, user: data.user };
   } catch (e: any) {
     return { ok: false, message: e.toString() };
   }
@@ -69,14 +70,11 @@ export function useUser() {
     mutationFn: (userData: Partial<InsertUser>) => handleRequest('/api/login', 'POST', userData),
     onSuccess: (result) => {
       if (result.ok) {
+        queryClient.setQueryData(['user'], result.user);
         queryClient.invalidateQueries({ queryKey: ['user'] });
         toast({ title: "Success", description: result.message });
       } else {
-        toast({ 
-          title: "Error", 
-          description: result.message,
-          variant: "destructive"
-        });
+        throw new Error(result.message);
       }
     },
   });
@@ -84,7 +82,7 @@ export function useUser() {
   const logoutMutation = useMutation({
     mutationFn: () => handleRequest('/api/logout', 'POST'),
     onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['user'] });
+      queryClient.setQueryData(['user'], null);
       if (result.ok) {
         toast({ title: "Success", description: result.message });
       }
@@ -95,14 +93,11 @@ export function useUser() {
     mutationFn: (userData: Partial<InsertUser>) => handleRequest('/api/register', 'POST', userData),
     onSuccess: (result) => {
       if (result.ok) {
+        queryClient.setQueryData(['user'], result.user);
         queryClient.invalidateQueries({ queryKey: ['user'] });
         toast({ title: "Success", description: result.message });
       } else {
-        toast({ 
-          title: "Error", 
-          description: result.message,
-          variant: "destructive"
-        });
+        throw new Error(result.message);
       }
     },
   });
