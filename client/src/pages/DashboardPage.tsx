@@ -13,9 +13,12 @@ import { OccupancyHeatMap } from "@/components/dashboard/OccupancyHeatMap";
 export default function DashboardPage() {
   const { user } = useUser();
   const [location] = useLocation();
-  
-  if (!user) return null;
-  
+
+  if (!user) {
+    window.location.href = '/';
+    return null;
+  }
+
   const config = DASHBOARD_CONFIG[user.role as keyof typeof DASHBOARD_CONFIG];
 
   return (
@@ -35,9 +38,7 @@ export default function DashboardPage() {
             <Route path="/dashboard/users" component={UserManagement} />
             <Route path="/dashboard/reports" component={Reports} />
             <Route>
-              <div className="flex items-center justify-center h-[calc(100vh-200px)]">
-                <h2 className="text-2xl font-semibold">Page Not Found</h2>
-              </div>
+              <Overview />
             </Route>
           </Switch>
         </div>
@@ -127,7 +128,7 @@ function Controls() {
 
 function UserManagement() {
   const { user } = useUser();
-  
+
   if (user?.role !== 'admin') {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-200px)]">

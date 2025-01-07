@@ -20,11 +20,6 @@ function AppRoutes() {
   const { user, isLoading } = useUser();
   const [, setLocation] = useLocation();
 
-  // Redirect to dashboard if user is authenticated
-  if (user && window.location.pathname === '/') {
-    setLocation('/dashboard');
-  }
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -33,18 +28,20 @@ function AppRoutes() {
     );
   }
 
+  // If user is not authenticated, show auth page
   if (!user) {
     return <AuthPage />;
+  }
+
+  // If user is authenticated and on root, redirect to dashboard
+  if (window.location.pathname === '/') {
+    setLocation('/dashboard');
+    return null;
   }
 
   return (
     <Switch>
       <Route path="/dashboard/*" component={DashboardPage} />
-      <Route path="/">
-        <div className="flex items-center justify-center min-h-screen">
-          <h1 className="text-2xl font-bold">Redirecting to dashboard...</h1>
-        </div>
-      </Route>
       <Route>
         <div className="flex items-center justify-center min-h-screen">
           <h1 className="text-2xl font-bold">404 - Page Not Found</h1>
