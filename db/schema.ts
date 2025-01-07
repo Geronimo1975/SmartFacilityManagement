@@ -34,9 +34,18 @@ export const buildingAccess = pgTable("building_access", {
   buildingId: integer("building_id").references(() => buildings.id).notNull(),
 });
 
+export const occupancyData = pgTable("occupancy_data", {
+  id: serial("id").primaryKey(),
+  buildingId: integer("building_id").references(() => buildings.id).notNull(),
+  zone: text("zone").notNull(),
+  occupancyCount: integer("occupancy_count").notNull().default(0),
+  timestamp: timestamp("timestamp").defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type Building = typeof buildings.$inferSelect;
+export type OccupancyData = typeof occupancyData.$inferSelect;
 
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);

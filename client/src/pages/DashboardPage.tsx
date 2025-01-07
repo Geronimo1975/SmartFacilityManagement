@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuery } from "@tanstack/react-query";
 import { Building } from "@db/schema";
 import { Loader2 } from "lucide-react";
+import { OccupancyHeatMap } from "@/components/dashboard/OccupancyHeatMap";
 
 export default function DashboardPage() {
   const { user } = useUser();
@@ -104,16 +105,21 @@ function Controls() {
   }
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-6">
       {buildings.map((building) => (
-        <Card key={building.id}>
-          <CardHeader>
-            <CardTitle>{building.name}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <BuildingControls buildingId={building.id} />
-          </CardContent>
-        </Card>
+        <div key={building.id} className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{building.name}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 md:grid-cols-2">
+                <BuildingControls buildingId={building.id} />
+                <OccupancyHeatMap buildingId={building.id} />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       ))}
     </div>
   );

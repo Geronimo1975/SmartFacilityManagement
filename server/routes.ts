@@ -1,9 +1,10 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
-import { buildings, buildingAccess, users } from "@db/schema";
+import { setupWebSocket } from "./websocket";
+import { buildings, buildingAccess, users, occupancyData } from "@db/schema";
 import { db } from "@db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
@@ -16,7 +17,13 @@ export function registerRoutes(app: Express): Server {
 
     try {
       const userBuildings = await db
-        .select()
+        .select({
+          id: buildings.id,
+          name: buildings.name,
+          address: buildings.address,
+          status: buildings.status,
+          createdAt: buildings.createdAt
+        })
         .from(buildings)
         .innerJoin(buildingAccess, eq(buildings.id, buildingAccess.buildingId))
         .where(eq(buildingAccess.userId, req.user!.id));
@@ -24,6 +31,27 @@ export function registerRoutes(app: Express): Server {
       res.json(userBuildings);
     } catch (error) {
       res.status(500).send("Failed to fetch buildings");
+    }
+  });
+
+  app.get("/api/buildings/:id/occupancy", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).send("Not authenticated");
+    }
+
+    const buildingId = parseInt(req.params.id);
+
+    try {
+      const data = await db
+        .select()
+        .from(occupancyData)
+        .where(eq(occupancyData.buildingId, buildingId))
+        .orderBy(desc(occupancyData.timestamp))
+        .limit(100);
+
+      res.json(data);
+    } catch (error) {
+      res.status(500).send("Failed to fetch occupancy data");
     }
   });
 
@@ -59,5 +87,6 @@ export function registerRoutes(app: Express): Server {
   });
 
   const httpServer = createServer(app);
+  setupWebSocket(httpServer);
   return httpServer;
 }
